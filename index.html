@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>8-Bit Player</title>
+    <title>Retro Game Player</title>
     <style>
         :root {
             --red: #E71B1B;
             --yellow: #FEDE00;
             --blue: #049CD8;
-            --bg: #000;
+            --bg: #1a1a1a;
+            --metal: #7D7D7D;
         }
 
         body {
@@ -24,7 +25,27 @@
             overflow: hidden;
         }
 
-        /* الخلفية المتحركة */
+        .crt-scanlines {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.2) 0px,
+                rgba(0, 0, 0, 0.2) 2px,
+                transparent 3px,
+                transparent 4px
+            );
+            pointer-events: none;
+            z-index: 999;
+            animation: scanline 3s linear infinite;
+        }
+
+        @keyframes scanline {
+            from { transform: translateY(-100%); }
+            to { transform: translateY(100%); }
+        }
+
         .pixel-bg {
             position: absolute;
             width: 200%;
@@ -33,14 +54,14 @@
                 repeating-linear-gradient(0deg, 
                     transparent 0px, 
                     transparent 1px, 
-                    rgba(255,255,255,0.05) 2px, 
-                    rgba(255,255,255,0.05) 3px
+                    rgba(255,255,255,0.04) 2px, 
+                    rgba(255,255,255,0.04) 3px
                 ),
                 repeating-linear-gradient(90deg, 
                     transparent 0px, 
                     transparent 1px, 
-                    rgba(255,255,255,0.05) 2px, 
-                    rgba(255,255,255,0.05) 3px
+                    rgba(255,255,255,0.04) 2px, 
+                    rgba(255,255,255,0.04) 3px
                 );
             z-index: 0;
             animation: moveGrid 20s linear infinite;
@@ -51,7 +72,6 @@
             100% { transform: translate(-50%, -50%); }
         }
 
-        /* النجوم المتحركة */
         .stars {
             position: absolute;
             width: 100%;
@@ -73,122 +93,195 @@
         }
 
         .gameboy-frame {
-            width: 360px;
+            width: 340px;
             background: #6B6B6B;
-            border: 8px solid #4A4A4A;
-            border-radius: 15px;
-            padding: 25px;
+            border: 10px solid #4A4A4A;
+            border-radius: 18px;
+            padding: 20px;
             position: relative;
-            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            box-shadow: 
+                0 0 20px rgba(0,0,0,0.5),
+                inset 0 0 15px rgba(0,0,0,0.2);
             z-index: 1;
         }
 
         .screen {
             background: #8BAC0F;
-            border: 5px solid #4A5C2B;
+            border: 6px solid #4A5C2B;
             padding: 15px;
             margin-bottom: 20px;
             position: relative;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+            box-shadow: 
+                inset 0 0 15px rgba(0,0,0,0.3),
+                0 3px 8px rgba(0,0,0,0.5);
         }
 
-        .mario-theme {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 15px;
-        }
-
-        .mushroom {
-            width: 40px;
-            height: 40px;
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23fff" d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2m0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8"/><path fill="%23E71B1B" d="M12 6c-3.3 0-6 2.7-6 6s2.7 6 6 6 6-2.7 6-6-2.7-6-6-6"/></svg>');
-        }
-
-        .coin {
-            width: 30px;
-            height: 30px;
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23FEDE00" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8"/><path fill="%23FEDE00" d="M12 15c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3"/></svg>');
+        .brand-label {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #4A4A4A;
+            color: var(--yellow);
+            padding: 3px 12px;
+            border-radius: 4px;
+            font-size: 0.5em;
+            text-shadow: 1px 1px #000;
         }
 
         .track-info {
             color: var(--yellow);
             text-align: center;
-            margin: 15px 0;
-            font-size: 0.8em;
+            margin: 12px 0;
             text-shadow: 2px 2px #000;
+            min-height: 50px;
         }
 
-        .controls {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
+        .track-info div:first-child {
+            font-size: 0.9em;
+            margin-bottom: 4px;
+            letter-spacing: 1px;
+        }
+
+        .track-info div:last-child {
+            font-size: 0.6em;
+            opacity: 0.8;
+        }
+
+        .controls-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
             margin: 20px 0;
+            position: relative;
+        }
+
+        .designer-label {
+            position: absolute;
+            bottom: -1px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--red);
+            font-size: 1em;
+            text-shadow: 1px 1px #000;
+            white-space: nowrap;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .d-pad {
+            display: grid;
+            grid-template: 
+                ". up ."
+                "left center right"
+                ". down .";
+            gap: 5px;
+        }
+
+        .d-pad-btn {
+            width: 32px;
+            height: 32px;
+            background: #4A4A4A;
+            border: 3px solid #333;
+            border-radius: 5px;
+            box-shadow: 0 3px 0 #333;
+            cursor: pointer;
+            font-size: 0.6em;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .d-pad-btn:active {
+            transform: translateY(3px);
+            box-shadow: none;
+        }
+
+        .action-btns {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
         .game-btn {
             background: #4A4A4A;
             border: 3px solid #333;
-            border-radius: 8px;
-            padding: 12px;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
             color: #fff;
             cursor: pointer;
             font-family: inherit;
-            transition: all 0.2s;
-            box-shadow: 0 4px 0 #333;
+            box-shadow: 0 3px 0 #333;
+            transition: all 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
         }
 
         .game-btn:active {
-            transform: translateY(4px);
+            transform: translateY(3px);
             box-shadow: none;
         }
 
         .play-btn {
             background: var(--red);
             border-color: #B31515;
-            box-shadow: 0 4px 0 #B31515;
+            box-shadow: 0 3px 0 #B31515;
         }
 
         .progress-bar {
             height: 8px;
             background: #333;
             border-radius: 4px;
-            margin: 15px 0;
+            margin: 12px 0;
         }
 
         .progress {
             height: 100%;
             background: var(--yellow);
             border-radius: 4px;
-            width: 45%;
-            position: relative;
-        }
-
-        .progress::after {
-            content: '';
-            position: absolute;
-            right: -8px;
-            top: -4px;
-            width: 16px;
-            height: 16px;
-            background: var(--red);
-            border-radius: 50%;
-            border: 2px solid #B31515;
+            width: 0%;
+            transition: width 0.3s linear;
         }
 
         .playlist {
             border-top: 3px solid #4A4A4A;
-            padding-top: 15px;
+            padding-top: 12px;
+            max-height: 180px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .playlist::-webkit-scrollbar {
+            width: 8px;
+            background: #333;
+            border-radius: 4px;
+        }
+
+        .playlist::-webkit-scrollbar-thumb {
+            background: var(--yellow);
+            border-radius: 4px;
+            border: 2px solid #4A4A4A;
+            box-shadow: inset 0 0 3px rgba(0,0,0,0.5);
         }
 
         .playlist-item {
             color: #fff;
             padding: 8px;
-            margin: 5px 0;
+            margin: 6px 0;
             background: #333;
             border: 2px solid #4A4A4A;
-            font-size: 0.7em;
+            font-size: 0.6em;
             cursor: pointer;
             transition: all 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-radius: 3px;
         }
 
         .playlist-item:hover {
@@ -200,173 +293,244 @@
             background: var(--red);
             border-color: #B31515;
         }
+
+        .speaker-holes {
+            display: flex;
+            gap: 6px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+
+        .speaker-hole {
+            width: 10px;
+            height: 10px;
+            background: #4A4A4A;
+            border-radius: 50%;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+        }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="pixel-bg"></div>
+    <div class="crt-scanlines"></div>
     <div class="stars" id="stars"></div>
     
     <div class="gameboy-frame">
+        <div class="brand-label">RETRO PLAYER</div>
         <div class="screen">
-            <div class="mario-theme">
-                <div class="mushroom"></div>
-                <div class="coin"></div>
-            </div>
-
             <div class="track-info">
-                <div>SYSTEM_ACTIVE</div>
-                <div>Tamer Hosny</div>
+                <div>NOW PLAYING</div>
+                <div>Initializing...</div>
             </div>
 
             <div class="progress-bar">
                 <div class="progress"></div>
             </div>
 
-            <div class="controls">
-                <button class="game-btn">◀◀</button>
-                <button class="game-btn play-btn" id="play-btn">▶</button>
-                <button class="game-btn">▶▶</button>
+            <div class="controls-wrapper">
+                <div class="d-pad">
+                    <button class="d-pad-btn up">▲</button>
+                    <button class="d-pad-btn left">◀</button>
+                    <div class="designer-label">PAVLY EMAD</div>
+                    <button class="d-pad-btn right">▶</button>
+                    <button class="d-pad-btn down">▼</button>
+                </div>
+
+                <div class="action-btns">
+                    <button class="game-btn play-btn" id="play-btn">▶</button>
+                    <button class="game-btn">■</button>
+                </div>
             </div>
 
-            <div class="playlist">
-                <div class="playlist-item">1. Ana Masry</div>
-                <div class="playlist-item">2. Kol Yom A7ebo Tani</div>
-                <div class="playlist-item">3. Elly Gai A7la</div>
-                <div class="playlist-item">4. Saaedny Ansak</div>
-                <div class="playlist-item">5. Erfet Teghayar Men Nafsaha</div>
+            <div class="playlist" id="playlist-container">
+                <!-- القائمة الديناميكية -->
             </div>
+        </div>
+        <div class="speaker-holes">
+            <div class="speaker-hole"></div>
+            <div class="speaker-hole"></div>
+            <div class="speaker-hole"></div>
+            <div class="speaker-hole"></div>
         </div>
     </div>
 
     <script>
-        // إنشاء النجوم المتحركة
         function createStars() {
-            const starsContainer = document.getElementById('stars');
-            for (let i = 0; i < 50; i++) {
+            const container = document.getElementById('stars');
+            for (let i = 0; i < 120; i++) {
                 const star = document.createElement('div');
                 star.className = 'star';
                 star.style.left = `${Math.random() * 100}%`;
                 star.style.top = `${Math.random() * 100}%`;
-                star.style.width = `${Math.random() * 3}px`;
+                star.style.width = `${Math.random() * 2}px`;
                 star.style.height = star.style.width;
-                star.style.setProperty('--duration', `${Math.random() * 3 + 1}s`);
-                starsContainer.appendChild(star);
+                star.style.setProperty('--duration', `${Math.random() * 2 + 1}s`);
+                container.appendChild(star);
             }
         }
         createStars();
 
-        // مشغل الموسيقى
-        class EnhancedHackerPlayer {
+        const songsData = [
+            {
+                url: "https://serv100.albumaty.com/songs_2020/Albumaty.Com_tamr_hsni_hdlany_-_mn_fylm_bhbk.mp3",
+                artist: "Tamer Hosny",
+                title: "Hadl3ny"
+            },
+            {
+                url: "https://serv100.albumaty.com/dl/3en/amr-diab/albums/weylomoni/01.We_Yloumouni.mp3",
+                artist: "Amr Diab",
+                title: "We Yloumouni"
+            },
+            {
+                url: "https://serv100.albumaty.com/dl/mem/mohamed-hamaki/albums/haga-mosh-tabe3ya/03.Haga_Mosh_Tabeaya.mp3",
+                artist: "Mohamed Hamaki",
+                title: "Haga Mosh Tabeaya"
+            },
+            {
+                url: "https://serv100.albumaty.com/dl/gem/george-wassouf/albums/tabeb-garah/01.Tabeeb_Garrah.mp3",
+                artist: "George Wasuf",
+                title: "Tabeeb Garrah"
+            },
+            {
+                url: "https://serv100.albumaty.com/dl/mem/mohamed-mounir/albums/fi-3sh2-elbnat/07.Rabak_Lama_Yered.mp3",
+                artist: "Mohamed Mounir",
+                title: "Rabak Lama Yered"
+            },
+            {
+                url: "https://serv100.albumaty.com/song2022/Albumaty.Com_hmzh_nmrh_ryah_alhyat.mp3",
+                artist: "Hamza Nemra",
+                title: "Ryah Alhyat"
+            },
+            {
+                url: "https://serv100.albumaty.com/dl/mem/mohamed-ramdan/singels/Albumaty.Com.Mohamed.Ramadan.100.Mesa.mp3",
+                artist: "Mohamed Ramadan",
+                title: "100 Mesa"
+            },
+            {
+                url: "https://serv100.albumaty.com/dl/alf/amal-maher/albums/welad-elnhrda/9-_Welad_El_Naharda.mp3",
+                artist: "Amal Maher",
+                title: "Welad El Naharda"
+            },
+            {
+                url: "https://serv100.albumaty.com/songs_2020/Albumaty.Com_gnat_sbaty_alanfaaly.mp3",
+                artist: "Jannat",
+                title: "Sbaty Alanfaaly"
+            },
+            {
+                url: "https://serv100.albumaty.com/dl/khh/khaled-aggag/albums/wa7dany/02.Lamouny.mp3",
+                artist: "Khaled Aggag",
+                title: "Lamouny"
+            },
+            {
+                url: "https://serv100.albumaty.com/dl/th/tamer-ashour/albums/khialy/05_-_Bye_Bye.mp3",
+                artist: "Tamer Ashour",
+                title: "Bye Bye"
+            }
+        ];
+
+        class RetroPlayer {
             constructor() {
                 this.audio = new Audio();
-                this.tracks = [
-                    {
-                        title: "Ana Masry",
-                        artist: "Tamer Hosny",
-                        url: "https://serv100.albumaty.com/dl/th/tamer-hosny/albums/elly-gai-ahla/14.Ana_Masry.mp3",
-                        art: "https://www.timeoutriyadh.com/cloud/timeoutriyadh/2022/06/08/tamer-hosny-jeddah-season.jpg"
-                    },
-                    {
-                        title: "Kol Yom A7ebo Tani",
-                        artist: "Tamer Hosny",
-                        url: "https://serv100.albumaty.com/dl/th/tamer-hosny/albums/elly-gai-ahla/12.Kol_Yom_Ahebo_Tani.mp3",
-                        art: "https://www.timeoutriyadh.com/cloud/timeoutriyadh/2022/06/08/tamer-hosny-jeddah-season.jpg"
-                    },
-                    {
-                        title: "Elly Gai A7la",
-                        artist: "Tamer Hosny",
-                        url: "https://serv100.albumaty.com/dl/th/tamer-hosny/albums/elly-gai-ahla/01.Elly_Gai_Ahla.mp3",
-                        art: "https://www.timeoutriyadh.com/cloud/timeoutriyadh/2022/06/08/tamer-hosny-jeddah-season.jpg"
-                    },
-                    {
-                        title: "Saaedny Ansak",
-                        artist: "Tamer Hosny",
-                        url: "https://serv100.albumaty.com/dl/th/tamer-hosny/albums/elly-gai-ahla/11.Saaedny_Ansak.mp3",
-                        art: "https://www.timeoutriyadh.com/cloud/timeoutriyadh/2022/06/08/tamer-hosny-jeddah-season.jpg"
-                    },
-                    {
-                        title: "Erfet Teghayar Men Nafsaha",
-                        artist: "Tamer Hosny",
-                        url: "https://serv100.albumaty.com/dl/th/tamer-hosny/albums/elly-gai-ahla/02.Erfet_Teghayar_Men_Nafsaha.mp3",
-                        art: "https://www.timeoutriyadh.com/cloud/timeoutriyadh/2022/06/08/tamer-hosny-jeddah-season.jpg"
-                    }
-                ];
+                this.tracks = songsData;
                 this.currentTrack = 0;
                 this.isPlaying = false;
+                this.initPlayer();
+            }
+
+            initPlayer() {
                 this.initPlaylist();
+                this.setupControls();
+                this.loadTrack(0);
             }
 
             initPlaylist() {
-                document.querySelectorAll('.playlist-item').forEach((item, index) => {
-                    item.addEventListener('click', () => {
-                        this.loadTrack(index);
-                        if(this.isPlaying) this.togglePlay();
-                    });
+                const container = document.getElementById('playlist-container');
+                this.tracks.forEach((track, i) => {
+                    const item = document.createElement('div');
+                    item.className = 'playlist-item';
+                    item.textContent = `${i + 1}. ${track.title} - ${track.artist}`;
+                    item.onclick = () => this.selectTrack(i);
+                    container.appendChild(item);
                 });
             }
 
-            loadTrack(index) {
+            setupControls() {
+                document.getElementById('play-btn').onclick = () => this.togglePlay();
+                document.querySelector('.game-btn:not(.play-btn)').onclick = () => this.stop();
+                document.querySelector('.up').onclick = () => this.volumeUp();
+                document.querySelector('.down').onclick = () => this.volumeDown();
+                document.querySelector('.left').onclick = () => this.prevTrack();
+                document.querySelector('.right').onclick = () => this.nextTrack();
+            }
+
+            selectTrack(index) {
                 this.currentTrack = index;
+                this.loadTrack(index);
+                if (this.isPlaying) this.audio.play();
+            }
+
+            loadTrack(index) {
                 this.audio.src = this.tracks[index].url;
                 this.updateUI();
-                this.updatePlaylistHighlight();
+                this.highlightTrack();
             }
 
             updateUI() {
-                document.querySelector('.track-info div:first-child').textContent = 
+                document.querySelector('.track-info div:first-child').textContent =
                     this.tracks[this.currentTrack].title.toUpperCase();
-                document.querySelector('.track-info div:last-child').textContent = 
+                document.querySelector('.track-info div:last-child').textContent =
                     this.tracks[this.currentTrack].artist;
             }
 
-            updatePlaylistHighlight() {
-                document.querySelectorAll('.playlist-item').forEach((item, index) => {
-                    item.classList.toggle('playing', index === this.currentTrack);
+            highlightTrack() {
+                document.querySelectorAll('.playlist-item').forEach((item, i) => {
+                    item.classList.toggle('playing', i === this.currentTrack);
                 });
             }
 
             togglePlay() {
                 this.isPlaying = !this.isPlaying;
-                const playBtn = document.getElementById('play-btn');
-                playBtn.textContent = this.isPlaying ? '⏸' : '▶';
+                document.getElementById('play-btn').textContent = this.isPlaying ? '⏸' : '▶';
                 this.isPlaying ? this.audio.play() : this.audio.pause();
                 this.updateProgress();
             }
 
             updateProgress() {
-                this.audio.addEventListener('timeupdate', () => {
+                this.audio.ontimeupdate = () => {
                     const progress = (this.audio.currentTime / this.audio.duration) * 100;
                     document.querySelector('.progress').style.width = `${progress}%`;
-                });
+                };
             }
 
             nextTrack() {
                 this.currentTrack = (this.currentTrack + 1) % this.tracks.length;
                 this.loadTrack(this.currentTrack);
-                if(this.isPlaying) this.audio.play();
+                if (this.isPlaying) this.audio.play();
             }
 
             prevTrack() {
                 this.currentTrack = (this.currentTrack - 1 + this.tracks.length) % this.tracks.length;
                 this.loadTrack(this.currentTrack);
-                if(this.isPlaying) this.audio.play();
+                if (this.isPlaying) this.audio.play();
+            }
+
+            volumeUp() {
+                this.audio.volume = Math.min(1, this.audio.volume + 0.1);
+            }
+
+            volumeDown() {
+                this.audio.volume = Math.max(0, this.audio.volume - 0.1);
+            }
+
+            stop() {
+                this.audio.pause();
+                this.audio.currentTime = 0;
+                this.isPlaying = false;
+                document.getElementById('play-btn').textContent = '▶';
             }
         }
 
-        const player = new EnhancedHackerPlayer();
-        player.loadTrack(0);
-
-        // أحداث الأزرار
-        document.querySelectorAll('.game-btn').forEach((btn, index) => {
-            btn.addEventListener('click', () => {
-                switch(index) {
-                    case 0: player.prevTrack(); break;
-                    case 1: player.togglePlay(); break;
-                    case 2: player.nextTrack(); break;
-                }
-            });
-        });
+        const player = new RetroPlayer();
     </script>
 </body>
 </html>
