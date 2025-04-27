@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar">
 <head>
@@ -20,9 +21,10 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            font-family: 'Press Start 2P', cursive;
+            font-family: 'Press Start 2P', 'Courier New', monospace;
             position: relative;
             overflow: hidden;
+            touch-action: manipulation;
         }
 
         .crt-scanlines {
@@ -39,6 +41,7 @@
             pointer-events: none;
             z-index: 999;
             animation: scanline 3s linear infinite;
+            will-change: transform;
         }
 
         @keyframes scanline {
@@ -85,6 +88,7 @@
             background: white;
             border-radius: 50%;
             animation: twinkle var(--duration) ease-in-out infinite;
+            will-change: opacity;
         }
 
         @keyframes twinkle {
@@ -102,11 +106,16 @@
             box-shadow: 
                 0 0 20px rgba(0,0,0,0.5),
                 inset 0 0 15px rgba(0,0,0,0.2);
-            z-index: 1;
+            z-index: 2;
         }
 
         .screen {
-            background: #8BAC0F;
+            background: repeating-linear-gradient(
+                transparent,
+                transparent 3px,
+                rgba(0,0,0,0.2) 4px,
+                rgba(0,0,0,0.2) 5px
+            ), #8BAC0F;
             border: 6px solid #4A5C2B;
             padding: 15px;
             margin-bottom: 20px;
@@ -114,6 +123,19 @@
             box-shadow: 
                 inset 0 0 15px rgba(0,0,0,0.3),
                 0 3px 8px rgba(0,0,0,0.5);
+            overflow: hidden;
+            z-index: 3;
+        }
+
+        #visualizer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.3;
+            mix-blend-mode: screen;
         }
 
         .brand-label {
@@ -135,6 +157,8 @@
             margin: 12px 0;
             text-shadow: 2px 2px #000;
             min-height: 50px;
+            position: relative;
+            z-index: 1;
         }
 
         .track-info div:first-child {
@@ -146,6 +170,23 @@
         .track-info div:last-child {
             font-size: 0.6em;
             opacity: 0.8;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            margin: 12px 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .progress {
+            height: 100%;
+            background: var(--yellow);
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s linear;
         }
 
         .controls-wrapper {
@@ -233,27 +274,14 @@
             box-shadow: 0 3px 0 #B31515;
         }
 
-        .progress-bar {
-            height: 8px;
-            background: #333;
-            border-radius: 4px;
-            margin: 12px 0;
-        }
-
-        .progress {
-            height: 100%;
-            background: var(--yellow);
-            border-radius: 4px;
-            width: 0%;
-            transition: width 0.3s linear;
-        }
-
         .playlist {
             border-top: 3px solid #4A4A4A;
             padding-top: 12px;
-            max-height: 180px;
+            height: 180px;
             overflow-y: auto;
             overflow-x: hidden;
+            position: relative;
+            z-index: 4;
         }
 
         .playlist::-webkit-scrollbar {
@@ -308,19 +336,52 @@
             border-radius: 50%;
             box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
         }
+
+        .volume-indicator {
+            height: 4px;
+            background: #333;
+            margin: 8px 0;
+            border-radius: 2px;
+        }
+
+        .volume-bar {
+            height: 100%;
+            background: var(--yellow);
+            width: 100%;
+            border-radius: 2px;
+            transition: width 0.2s linear;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+
+        @media (max-width: 400px) {
+            .gameboy-frame {
+                transform: scale(0.8);
+            }
+        }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="crt-scanlines"></div>
-    <div class="stars" id="stars"></div>
+    <div class="crt-scanlines" aria-hidden="true"></div>
+    <div class="stars" id="stars" aria-hidden="true"></div>
     
-    <div class="gameboy-frame">
+    <div class="gameboy-frame" role="application" aria-label="مشغل الموسيقى الرجعي">
         <div class="brand-label">RETRO PLAYER</div>
         <div class="screen">
-            <div class="track-info">
+            <canvas id="visualizer" aria-hidden="true"></canvas>
+            <div class="track-info" aria-live="polite">
                 <div>NOW PLAYING</div>
-                <div>Initializing...</div>
+                <div id="now-playing">Initializing...</div>
             </div>
 
             <div class="progress-bar">
@@ -329,21 +390,25 @@
 
             <div class="controls-wrapper">
                 <div class="d-pad">
-                    <button class="d-pad-btn up">▲</button>
-                    <button class="d-pad-btn left">◀</button>
+                    <button class="d-pad-btn up" aria-label="رفع الصوت">▲</button>
+                    <button class="d-pad-btn left" aria-label="المسار السابق">◀</button>
                     <div class="designer-label">PAVLY EMAD</div>
-                    <button class="d-pad-btn right">▶</button>
-                    <button class="d-pad-btn down">▼</button>
+                    <button class="d-pad-btn right" aria-label="المسار التالي">▶</button>
+                    <button class="d-pad-btn down" aria-label="خفض الصوت">▼</button>
                 </div>
 
                 <div class="action-btns">
-                    <button class="game-btn play-btn" id="play-btn">▶</button>
-                    <button class="game-btn">■</button>
+                    <button class="game-btn play-btn" id="play-btn" aria-label="تشغيل/إيقاف">▶</button>
+                    <button class="game-btn" aria-label="إيقاف">■</button>
                 </div>
             </div>
 
+            <div class="volume-indicator" aria-hidden="true">
+                <div class="volume-bar"></div>
+            </div>
+
             <div class="playlist" id="playlist-container">
-                <!-- القائمة الديناميكية -->
+                <!-- Dynamic playlist -->
             </div>
         </div>
         <div class="speaker-holes">
@@ -355,101 +420,129 @@
     </div>
 
     <script>
-        function createStars() {
-            const container = document.getElementById('stars');
-            for (let i = 0; i < 120; i++) {
-                const star = document.createElement('div');
-                star.className = 'star';
-                star.style.left = `${Math.random() * 100}%`;
-                star.style.top = `${Math.random() * 100}%`;
-                star.style.width = `${Math.random() * 2}px`;
-                star.style.height = star.style.width;
-                star.style.setProperty('--duration', `${Math.random() * 2 + 1}s`);
-                container.appendChild(star);
-            }
-        }
-        createStars();
-
         const songsData = [
             {
-                url: "https://serv100.albumaty.com/songs_2020/Albumaty.Com_tamr_hsni_hdlany_-_mn_fylm_bhbk.mp3",
-                artist: "Tamer Hosny",
-                title: "Hadl3ny"
-            },
-            {
-                url: "https://serv100.albumaty.com/dl/3en/amr-diab/albums/weylomoni/01.We_Yloumouni.mp3",
-                artist: "Amr Diab",
-                title: "We Yloumouni"
-            },
-            {
-                url: "https://serv100.albumaty.com/dl/mem/mohamed-hamaki/albums/haga-mosh-tabe3ya/03.Haga_Mosh_Tabeaya.mp3",
-                artist: "Mohamed Hamaki",
-                title: "Haga Mosh Tabeaya"
-            },
-            {
-                url: "https://serv100.albumaty.com/dl/gem/george-wassouf/albums/tabeb-garah/01.Tabeeb_Garrah.mp3",
-                artist: "George Wasuf",
-                title: "Tabeeb Garrah"
-            },
-            {
-                url: "https://serv100.albumaty.com/dl/mem/mohamed-mounir/albums/fi-3sh2-elbnat/07.Rabak_Lama_Yered.mp3",
-                artist: "Mohamed Mounir",
-                title: "Rabak Lama Yered"
-            },
-            {
-                url: "https://serv100.albumaty.com/song2022/Albumaty.Com_hmzh_nmrh_ryah_alhyat.mp3",
-                artist: "Hamza Nemra",
-                title: "Ryah Alhyat"
-            },
-            {
-                url: "https://serv100.albumaty.com/dl/mem/mohamed-ramdan/singels/Albumaty.Com.Mohamed.Ramadan.100.Mesa.mp3",
+                url: "https://raw.githubusercontent.com/bolae700/Arabic-songs/main/100%20Mesa.MP3",
                 artist: "Mohamed Ramadan",
                 title: "100 Mesa"
             },
             {
-                url: "https://serv100.albumaty.com/dl/alf/amal-maher/albums/welad-elnhrda/9-_Welad_El_Naharda.mp3",
-                artist: "Amal Maher",
-                title: "Welad El Naharda"
+                url: "https://raw.githubusercontent.com/bolae700/Arabic-songs/main/Aktar.MP3",
+                artist: "Amr Diab",
+                title: "Aktar"
             },
             {
-                url: "https://serv100.albumaty.com/songs_2020/Albumaty.Com_gnat_sbaty_alanfaaly.mp3",
-                artist: "Jannat",
-                title: "Sbaty Alanfaaly"
+                url: "https://raw.githubusercontent.com/bolae700/Arabic-songs/main/Alo%20Fiki.MP3",
+                artist: "Hamaki",
+                title: "Alo Fiki"
             },
             {
-                url: "https://serv100.albumaty.com/dl/khh/khaled-aggag/albums/wa7dany/02.Lamouny.mp3",
+                url: "https://raw.githubusercontent.com/bolae700/Arabic-songs/main/Asmarany.MP3",
+                artist: "Mohamed Mounir",
+                title: "Asmarany"
+            },
+            {
+                url: "https://raw.githubusercontent.com/bolae700/Arabic-songs/main/Bye%20Bye.MP3",
+                artist: "Hamaki",
+                title: "Bye Bye"
+            },
+            {
+                url: "https://raw.githubusercontent.com/bolae700/Arabic-songs/main/Hdl3ny.MP3",
+                artist: "Tamer Hosny",
+                title: "Hdl3ny"
+            },
+            {
+                url: "https://raw.githubusercontent.com/bolae700/Arabic-songs/main/Lamouny.MP3",
                 artist: "Khaled Aggag",
                 title: "Lamouny"
             },
             {
-                url: "https://serv100.albumaty.com/dl/th/tamer-ashour/albums/khialy/05_-_Bye_Bye.mp3",
+                url: "https://raw.githubusercontent.com/bolae700/Arabic-songs/main/Ma3%20Assalama.MP3",
+                artist: "Hamza Nemra",
+                title: "Ma3 Assalama"
+            },
+            {
+                url: "https://raw.githubusercontent.com/bolae700/Arabic-songs/main/Mestabyeaa.MP3",
                 artist: "Tamer Ashour",
-                title: "Bye Bye"
+                title: "Mestabyeaa"
+            },
+            {
+                url: "https://raw.githubusercontent.com/bolae700/Arabic-songs/main/Msh%20Habayeb.MP3",
+                artist: "George Wasuf",
+                title: "Msh Habayeb"
+            },
+            {
+                url: "https://raw.githubusercontent.com/bolae700/Arabic-songs/main/Ryah%20Elhaya.MP3",
+                artist: "Hamza Nemra",
+                title: "Ryah Elhaya"
+            },
+            {
+                url: "https://raw.githubusercontent.com/bolae700/Arabic-songs/main/Sbaty%20Alanfaaly.MP3",
+                artist: "Jannat",
+                title: "Sbaty Alanfaaly"
+            },
+            {
+                url: "https://raw.githubusercontent.com/bolae700/Arabic-songs/main/Tabeeb.MP3",
+                artist: "George Wasuf",
+                title: "Tabeeb Graah"
+            },
+            {
+                url: "https://raw.githubusercontent.com/bolae700/Arabic-songs/main/Wenta%20Tayeb.MP3",
+                artist: "Tamer Hosny",
+                title: "Wenta Tayeb"
             }
         ];
-
-        class RetroPlayer {
+        class EnhancedRetroPlayer {
             constructor() {
                 this.audio = new Audio();
+                this.audio.crossOrigin = "anonymous";
                 this.tracks = songsData;
                 this.currentTrack = 0;
                 this.isPlaying = false;
+                this.visualizer = new Visualizer();
+                this.audioContext = null;
+                this.currentRequest = null;
                 this.initPlayer();
             }
 
-            initPlayer() {
-                this.initPlaylist();
+            async initPlayer() {
+                await this.initPlaylist();
                 this.setupControls();
-                this.loadTrack(0);
+                await this.setupAudioContext();
+                this.initKeyboardControls();
+                this.initDragDrop();
+                this.initVolumeIndicator();
             }
 
-            initPlaylist() {
+            async setupAudioContext() {
+                const initContext = async () => {
+                    try {
+                        if (!this.audioContext) {
+                            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                            await this.audioContext.resume();
+                            this.visualizer.initVisualizer(this.audio, this.audioContext);
+                        }
+                        if (this.audioContext.state === 'suspended') {
+                            await this.audioContext.resume();
+                        }
+                    } catch (error) {
+                        this.showError('خطأ في تهيئة الصوت');
+                        console.error('AudioContext error:', error);
+                    }
+                };
+
+                document.body.addEventListener('click', initContext, { once: true });
+                document.body.addEventListener('touchstart', initContext, { once: true });
+            }
+
+            async initPlaylist() {
                 const container = document.getElementById('playlist-container');
+                container.innerHTML = '';
                 this.tracks.forEach((track, i) => {
                     const item = document.createElement('div');
                     item.className = 'playlist-item';
                     item.textContent = `${i + 1}. ${track.title} - ${track.artist}`;
-                    item.onclick = () => this.selectTrack(i);
+                    item.onclick = async () => await this.selectTrack(i);
                     container.appendChild(item);
                 });
             }
@@ -461,24 +554,127 @@
                 document.querySelector('.down').onclick = () => this.volumeDown();
                 document.querySelector('.left').onclick = () => this.prevTrack();
                 document.querySelector('.right').onclick = () => this.nextTrack();
+                
+                this.audio.addEventListener('error', (e) => {
+                    this.showError('خطأ في تشغيل الصوت');
+                    console.error('Audio error:', e);
+                });
             }
 
-            selectTrack(index) {
-                this.currentTrack = index;
-                this.loadTrack(index);
-                if (this.isPlaying) this.audio.play();
+            initKeyboardControls() {
+                document.addEventListener('keydown', (e) => {
+                    switch(e.code) {
+                        case 'Space': 
+                            e.preventDefault();
+                            this.togglePlay();
+                            break;
+                        case 'ArrowRight': this.nextTrack(); break;
+                        case 'ArrowLeft': this.prevTrack(); break;
+                        case 'ArrowUp': this.volumeUp(); break;
+                        case 'ArrowDown': this.volumeDown(); break;
+                    }
+                });
             }
 
-            loadTrack(index) {
-                this.audio.src = this.tracks[index].url;
-                this.updateUI();
-                this.highlightTrack();
+            initDragDrop() {
+                const container = document.body;
+                
+                container.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    container.classList.add('dragover');
+                });
+
+                container.addEventListener('dragleave', () => {
+                    container.classList.remove('dragover');
+                });
+
+                container.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    container.classList.remove('dragover');
+                    
+                    const files = Array.from(e.dataTransfer.files)
+                        .filter(file => file.type.startsWith('audio/'));
+                    
+                    if(files.length) {
+                        await this.handleNewFiles(files);
+                    }
+                });
+            }
+
+            async handleNewFiles(files) {
+                const newTracks = await Promise.all(files.map(async file => ({
+                    url: URL.createObjectURL(file),
+                    artist: 'مستخدم',
+                    title: file.name.replace(/\.[^/.]+$/, "")
+                })));
+                
+                this.tracks = [...newTracks, ...this.tracks];
+                await this.initPlaylist();
+                this.loadTrack(0);
+            }
+
+            initVolumeIndicator() {
+                const updateVolume = () => {
+                    const bar = document.querySelector('.volume-bar');
+                    bar.style.width = `${this.audio.volume * 100}%`;
+                };
+                
+                this.audio.addEventListener('volumechange', updateVolume);
+                updateVolume();
+            }
+
+            showError(message) {
+                const infoDiv = document.getElementById('now-playing');
+                infoDiv.textContent = message;
+                infoDiv.style.color = 'var(--red)';
+                setTimeout(() => {
+                    infoDiv.style.color = '';
+                    infoDiv.textContent = this.tracks[this.currentTrack]?.artist || 'Initializing...';
+                }, 5000);
+            }
+
+            async selectTrack(index) {
+                try {
+                    this.currentTrack = index;
+                    await this.loadTrack(index);
+                    if (this.isPlaying) await this.audio.play();
+                } catch (error) {
+                    this.showError('تعذر تحميل المقطع');
+                    console.error('Track selection error:', error);
+                }
+            }
+
+            async loadTrack(index) {
+                try {
+                    if(this.currentRequest) {
+                        this.currentRequest.cancel();
+                    }
+                    
+                    this.audio.src = this.tracks[index].url;
+                    await new Promise((resolve, reject) => {
+                        const timer = setTimeout(() => reject(new Error('مهلة التحميل')), 15000);
+                        this.audio.addEventListener('canplaythrough', () => {
+                            clearTimeout(timer);
+                            resolve();
+                        });
+                        this.audio.addEventListener('error', (e) => {
+                            clearTimeout(timer);
+                            reject(e);
+                        });
+                    });
+                    this.updateUI();
+                    this.highlightTrack();
+                } catch (error) {
+                    this.showError(error.message || 'فشل في التحميل');
+                    console.error('Load error:', error);
+                    throw error;
+                }
             }
 
             updateUI() {
                 document.querySelector('.track-info div:first-child').textContent =
                     this.tracks[this.currentTrack].title.toUpperCase();
-                document.querySelector('.track-info div:last-child').textContent =
+                document.getElementById('now-playing').textContent =
                     this.tracks[this.currentTrack].artist;
             }
 
@@ -488,30 +684,41 @@
                 });
             }
 
-            togglePlay() {
-                this.isPlaying = !this.isPlaying;
-                document.getElementById('play-btn').textContent = this.isPlaying ? '⏸' : '▶';
-                this.isPlaying ? this.audio.play() : this.audio.pause();
-                this.updateProgress();
+            async togglePlay() {
+                try {
+                    this.isPlaying = !this.isPlaying;
+                    document.getElementById('play-btn').textContent = this.isPlaying ? '⏸' : '▶';
+                    if (this.isPlaying) {
+                        await this.audio.play();
+                    } else {
+                        this.audio.pause();
+                    }
+                    this.updateProgress();
+                } catch (error) {
+                    this.showError('فشل في التشغيل');
+                    console.error('Play error:', error);
+                }
             }
 
             updateProgress() {
                 this.audio.ontimeupdate = () => {
-                    const progress = (this.audio.currentTime / this.audio.duration) * 100;
-                    document.querySelector('.progress').style.width = `${progress}%`;
+                    if (this.audio.duration) {
+                        const progress = (this.audio.currentTime / this.audio.duration) * 100;
+                        document.querySelector('.progress').style.width = `${progress}%`;
+                    }
                 };
             }
 
-            nextTrack() {
+            async nextTrack() {
                 this.currentTrack = (this.currentTrack + 1) % this.tracks.length;
-                this.loadTrack(this.currentTrack);
-                if (this.isPlaying) this.audio.play();
+                await this.loadTrack(this.currentTrack);
+                if (this.isPlaying) await this.audio.play();
             }
 
-            prevTrack() {
+            async prevTrack() {
                 this.currentTrack = (this.currentTrack - 1 + this.tracks.length) % this.tracks.length;
-                this.loadTrack(this.currentTrack);
-                if (this.isPlaying) this.audio.play();
+                await this.loadTrack(this.currentTrack);
+                if (this.isPlaying) await this.audio.play();
             }
 
             volumeUp() {
@@ -527,10 +734,102 @@
                 this.audio.currentTime = 0;
                 this.isPlaying = false;
                 document.getElementById('play-btn').textContent = '▶';
+                document.querySelector('.progress').style.width = '0%';
             }
         }
 
-        const player = new RetroPlayer();
+        class Visualizer {
+            constructor() {
+                this.canvas = document.getElementById('visualizer');
+                this.ctx = this.canvas.getContext('2d');
+                this.analyser = null;
+                this.dataArray = null;
+            }
+
+            initVisualizer(audioElement, audioContext) {
+                const source = audioContext.createMediaElementSource(audioElement);
+                this.analyser = audioContext.createAnalyser();
+                
+                source.connect(this.analyser);
+                this.analyser.connect(audioContext.destination);
+                
+                this.analyser.fftSize = 256;
+                const bufferLength = this.analyser.frequencyBinCount;
+                this.dataArray = new Uint8Array(bufferLength);
+                
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+                this.draw();
+            }
+
+            resizeCanvas() {
+                this.canvas.width = this.canvas.offsetWidth;
+                this.canvas.height = this.canvas.offsetHeight;
+            }
+
+            draw() {
+                if (!this.analyser) return;
+                
+                this.analyser.getByteFrequencyData(this.dataArray);
+                this.ctx.fillStyle = '#1a1a1a';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                this.ctx.lineWidth = 2;
+                this.ctx.strokeStyle = '#8BAC0F';
+                this.ctx.beginPath();
+                
+                const sliceWidth = this.canvas.width * 1.0 / this.dataArray.length;
+                let x = 0;
+                
+                for (let i = 0; i < this.dataArray.length; i++) {
+                    const v = this.dataArray[i] / 128.0;
+                    const y = v * this.canvas.height/2;
+                    
+                    if(i === 0) {
+                        this.ctx.moveTo(x, y);
+                    } else {
+                        this.ctx.lineTo(x, y);
+                    }
+                    
+                    x += sliceWidth;
+                }
+                
+                this.ctx.stroke();
+                
+                this.ctx.fillStyle = 'rgba(0, 255, 0, 0.05)';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                requestAnimationFrame(() => this.draw());
+            }
+        }
+
+        // Initialize player
+        const player = new EnhancedRetroPlayer();
+
+        // Cleanup on window close
+        window.addEventListener('beforeunload', () => {
+            player.audio.pause();
+            if(player.audioContext) {
+                player.audioContext.close();
+            }
+        });
+
+        // Create stars effect
+        function createStars() {
+            const container = document.getElementById('stars');
+            container.innerHTML = '';
+            for (let i = 0; i < 120; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.width = `${Math.random() * 2}px`;
+                star.style.height = star.style.width;
+                star.style.setProperty('--duration', `${Math.random() * 2 + 1}s`);
+                container.appendChild(star);
+            }
+        }
+        createStars();
     </script>
 </body>
 </html>
